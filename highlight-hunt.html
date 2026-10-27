@@ -1,0 +1,229 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Version 2 Highlight Hunt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Layout: sticky colour palette on top, the model answer as tappable chunks below, check/answer controls at the end */
+:root {
+  --bg: #f3f4f8; --card: #ffffff; --ink: #1d1f2c; --muted: #5d6178; --line: #dfe1ea;
+  --accent: #3f4bc4; --accent-ink: #ffffff;
+  --cond: #f7d154; --rel: #7cc4f2; --special: #c4a2f0; --word: #8fdcae; --story: #f5a3a3;
+  --good: #2e8b62; --bad: #c0392b;
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14151d; --card: #1e2030; --ink: #eceef6; --muted: #a3a7bd; --line: #33364a;
+    --accent: #8d97ff; --accent-ink: #14151d;
+    --cond: #8a7320; --rel: #275f86; --special: #5d3f8f; --word: #2c6e4a; --story: #8a3a3a;
+    --good: #5fc597; --bad: #ff8a7a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14151d; --card: #1e2030; --ink: #eceef6; --muted: #a3a7bd; --line: #33364a;
+  --accent: #8d97ff; --accent-ink: #14151d;
+  --cond: #8a7320; --rel: #275f86; --special: #5d3f8f; --word: #2c6e4a; --story: #8a3a3a;
+  --good: #5fc597; --bad: #ff8a7a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 6vw, 40px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; }
+
+.palette {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;
+}
+.pen {
+  font: inherit; text-align: left; display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink); border-radius: 14px; padding: 8px 12px; cursor: pointer;
+}
+.pen .top { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+.pen .sw { width: 18px; height: 18px; border-radius: 6px; flex: none; }
+.pen .look { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.pen .cnt { margin-left: auto; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.pen[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
+.pen.eraser .sw { background: repeating-linear-gradient(45deg, var(--line) 0 4px, transparent 4px 8px); border: 1px solid var(--muted); }
+.pen:focus-visible, .chunk:focus-visible, .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.topic { font-size: 14px; color: var(--muted); margin: 0; border-left: 0; }
+.topic b { color: var(--ink); }
+.text p { margin: 0 0 14px; font-size: 18px; line-height: 2; }
+.chunk { cursor: pointer; border-radius: 6px; padding: 2px 1px; transition: background .15s; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.chunk:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.chunk[data-c="cond"] { background: var(--cond); }
+.chunk[data-c="rel"] { background: var(--rel); }
+.chunk[data-c="special"] { background: var(--special); }
+.chunk[data-c="word"] { background: var(--word); }
+.chunk[data-c="story"] { background: var(--story); }
+.chunk.wrong { text-decoration: underline wavy var(--bad); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.chunk.right { text-decoration: underline var(--good); text-decoration-thickness: 3px; text-underline-offset: 5px; }
+.chunk.missed { outline: 2px dashed var(--bad); outline-offset: 1px; }
+
+.controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { font: inherit; font-weight: 700; border-radius: 999px; padding: 10px 20px; cursor: pointer; border: 2px solid var(--line); background: transparent; color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.report { display: flex; flex-direction: column; gap: 10px; }
+.report[hidden] { display: none; }
+.score { font-family: var(--display); font-weight: 800; font-size: 28px; margin: 0; }
+.rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.row { display: flex; align-items: center; gap: 8px; font-size: 15px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.row .sw { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.row b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.legend { font-size: 13px; color: var(--muted); margin: 0; }
+.steal { background: var(--bg); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.steal[hidden] { display: none; }
+.steal h2 { font-family: var(--display); font-size: 20px; margin: 0; }
+.steal ul { margin: 0; padding-left: 20px; }
+.note { font-size: 13px; color: var(--muted); text-align: center; margin: 0; }
+@media (max-width: 420px) { .text p { font-size: 16.5px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Lesson 12 · Speaking Part 2 · Activity 7</span>
+    <h1>Highlight Hunt</h1>
+    <p class="sub">Pick a colour, then tap the words or sentences in Version 2. Find everything, then press <b>Check</b>.</p>
+  </header>
+
+  <div class="palette" id="palette" role="group" aria-label="Choose a colour"></div>
+
+  <section class="card">
+    <p class="topic"><b>Describe someone you would like to study or work with.</b> · Version 2</p>
+    <div class="text" id="text"></div>
+    <div class="controls">
+      <button class="btn primary" id="check" type="button">✓ Check</button>
+      <button class="btn" id="show" type="button">Show answers</button>
+      <button class="btn" id="reset" type="button">↺ Start again</button>
+    </div>
+    <div class="report" id="report" hidden aria-live="polite">
+      <p class="score" id="score"></p>
+      <div class="rows" id="rows"></div>
+      <p class="legend">Green underline = correct · Wavy red = wrong colour or not needed · Dashed box = you missed it</p>
+    </div>
+    <div class="steal" id="steal" hidden>
+      <h2>🎯 Steal the structure</h2>
+      <p style="margin:0">Choose <b>2 structures</b> you found. Use them to talk about someone <b>you</b> would like to work with:</p>
+      <ul>
+        <li><i>What makes my friend… a great partner is…</i></li>
+        <li><i>If I had to choose…, … would…</i></li>
+        <li><i>I recall a time when…</i></li>
+      </ul>
+    </div>
+  </section>
+  <p class="note">Tip: a long chunk counts as one structure – tap it once.</p>
+</div>
+
+<script>
+const CATS = [
+  { k: "cond",    name: "Conditionals",       n: 2, look: "If + past, … would …" },
+  { k: "rel",     name: "Relative clauses",   n: 2, look: "when … / , which …" },
+  { k: "special", name: "Special structures", n: 4, look: "What … is · While … · , + V-ing · couldn't have + V3" },
+  { k: "word",    name: "Personality words",  n: 4, look: "words from today's lesson" },
+  { k: "story",   name: "Story starters",     n: 2, look: "phrases that begin an example" },
+];
+const P = [
+  [["I have had many opportunities to work with other people in a team,"], [" so I definitely have my own standards for an ideal partner."],
+   [" If I had to choose one person to be my study or work partner, Alex would definitely be my first choice.", "cond"],
+   [" We met in university about five years ago,"], [" and since then, we have collaborated on multiple projects."]],
+  [["What makes Alex an ideal study or work partner is his", "special"], [" intellectual", "word"], [" curiosity."],
+   [" He is always eager to explore new ideas and ask thought-provoking questions."],
+   [" I recall a time", "story"], [" when our research team was stuck on a challenging project.", "rel"],
+   [" While most of us were hesitant,", "special"], [" Alex's"], [" bold", "word"], [" leadership and mindset encouraged us to explore alternative approaches,"],
+   [" which ultimately helped us score the highest in our class.", "rel"]],
+  [["Another reason I admire him is his"], [" charismatic", "word"], [" communication skills."],
+   [" I have witnessed him", "story"], [" resolve conflicts with empathy yet logical reasoning,"],
+   [" ensuring that everyone on the team felt valued and heard.", "special"],
+   [" I certainly"], [" couldn't have done", "special"], [" what he did."]],
+  [["Above all, he is incredibly"], [" tireless", "word"], [" in his pursuit of excellence."],
+   [" He never settles for mediocrity and constantly motivates those around him to do better."],
+   [" If I had the opportunity to study or work with him again, I would definitely take it.", "cond"]],
+];
+const $ = id => document.getElementById(id);
+let pen = "cond";
+const chunks = [];
+
+function renderPalette() {
+  const marked = k => chunks.filter(c => c.el.dataset.c === k).length;
+  $("palette").innerHTML = CATS.map(c => `
+    <button type="button" class="pen" id="pen-${c.k}" data-k="${c.k}" aria-pressed="${pen === c.k}">
+      <span class="top"><span class="sw" style="background:var(--${c.k})"></span>${c.name}<span class="cnt">${marked(c.k)}/${c.n}</span></span>
+      <span class="look">${c.look}</span>
+    </button>`).join("") + `
+    <button type="button" class="pen eraser" id="pen-erase" data-k="erase" aria-pressed="${pen === "erase"}">
+      <span class="top"><span class="sw"></span>Eraser</span><span class="look">tap to remove a colour</span>
+    </button>`;
+}
+function renderText() {
+  const box = $("text"); box.innerHTML = ""; chunks.length = 0;
+  P.forEach(par => {
+    const p = document.createElement("p");
+    par.forEach(([t, cat]) => {
+      const lead = t.startsWith(" ");
+      if (lead) p.append(" ");
+      const s = document.createElement("span");
+      s.className = "chunk"; s.textContent = lead ? t.slice(1) : t;
+      s.tabIndex = 0; s.setAttribute("role", "button");
+      chunks.push({ el: s, cat: cat || null });
+      p.append(s);
+    });
+    box.append(p);
+  });
+}
+function clearMarks() { chunks.forEach(c => c.el.classList.remove("right", "wrong", "missed")); }
+function paint(el) {
+  clearMarks(); $("report").hidden = true;
+  if (pen === "erase" || el.dataset.c === pen) delete el.dataset.c;
+  else el.dataset.c = pen;
+  renderPalette();
+}
+function check() {
+  clearMarks();
+  let right = 0, wrong = 0;
+  const per = Object.fromEntries(CATS.map(c => [c.k, 0]));
+  chunks.forEach(c => {
+    const mine = c.el.dataset.c;
+    if (mine && mine === c.cat) { right++; per[c.cat]++; c.el.classList.add("right"); }
+    else if (mine) { wrong++; c.el.classList.add("wrong"); }
+    else if (c.cat) { c.el.classList.add("missed"); }
+  });
+  const total = CATS.reduce((a, c) => a + c.n, 0);
+  $("score").textContent = right === total && !wrong ? `🎉 Perfect! ${right} / ${total}` : `${right} / ${total} correct${wrong ? ` · ${wrong} wrong` : ""}`;
+  $("rows").innerHTML = CATS.map(c => `<div class="row"><span class="sw" style="background:var(--${c.k})"></span>${c.name}<b>${per[c.k]}/${c.n}</b></div>`).join("");
+  $("report").hidden = false;
+  $("steal").hidden = !(right === total && !wrong);
+}
+function showAnswers() {
+  chunks.forEach(c => { if (c.cat) c.el.dataset.c = c.cat; else delete c.el.dataset.c; });
+  renderPalette(); check();
+}
+$("palette").addEventListener("click", e => {
+  const b = e.target.closest(".pen"); if (!b) return;
+  pen = b.dataset.k; renderPalette();
+});
+$("text").addEventListener("click", e => { const s = e.target.closest(".chunk"); if (s) paint(s); });
+$("text").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("chunk")) { e.preventDefault(); paint(e.target); }
+});
+$("check").addEventListener("click", check);
+$("show").addEventListener("click", showAnswers);
+$("reset").addEventListener("click", () => { chunks.forEach(c => delete c.el.dataset.c); clearMarks(); $("report").hidden = true; $("steal").hidden = true; renderPalette(); });
+renderText(); renderPalette();
+</script>
+</html>

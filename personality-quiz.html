@@ -1,0 +1,279 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Personality Type Quiz</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Layout: one centred card that flips through 12 questions, then a result card tinted by the type's group */
+:root {
+  --bg: #f3f4f8;
+  --card: #ffffff;
+  --ink: #1d1f2c;
+  --muted: #5d6178;
+  --line: #dfe1ea;
+  --accent: #3f4bc4;
+  --accent-ink: #ffffff;
+  --analyst: #7a4fb0;
+  --diplomat: #2e8b62;
+  --sentinel: #2f78b5;
+  --explorer: #c98a12;
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14151d; --card: #1e2030; --ink: #eceef6; --muted: #a3a7bd; --line: #33364a;
+    --accent: #8d97ff; --accent-ink: #14151d;
+    --analyst: #b896e6; --diplomat: #5fc597; --sentinel: #6cb0ec; --explorer: #f0bb4c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14151d; --card: #1e2030; --ink: #eceef6; --muted: #a3a7bd; --line: #33364a;
+  --accent: #8d97ff; --accent-ink: #14151d;
+  --analyst: #b896e6; --diplomat: #5fc597; --sentinel: #6cb0ec; --explorer: #f0bb4c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 6vw, 40px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+
+.progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.part { display: flex; flex-direction: column; gap: 6px; }
+.part-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.dots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.dot { height: 6px; border-radius: 3px; background: var(--line); transition: background .2s; }
+.dot.done { background: var(--accent); }
+.dot.now { background: var(--ink); }
+
+.qhead { display: flex; flex-direction: column; gap: 6px; }
+.qtag { font-size: 13px; font-weight: 700; color: var(--accent); }
+.question { font-family: var(--display); font-weight: 700; font-size: clamp(22px, 4.6vw, 28px); line-height: 1.2; margin: 0; text-wrap: balance; }
+.options { display: flex; flex-direction: column; gap: 12px; }
+.opt {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  font: inherit; font-size: 17px; color: var(--ink); background: var(--bg);
+  border: 2px solid var(--line); border-radius: 14px; padding: 16px 18px; cursor: pointer;
+  transition: border-color .15s, transform .1s;
+}
+.opt:hover { border-color: var(--accent); }
+.opt:active { transform: scale(.99); }
+.opt:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.opt.picked { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+.letter {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--display); font-weight: 800; background: var(--card); border: 2px solid var(--line);
+}
+.opt.picked .letter { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.btn {
+  font: inherit; font-weight: 700; border-radius: 999px; padding: 10px 20px; cursor: pointer;
+  border: 2px solid var(--line); background: transparent; color: var(--ink);
+}
+.btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn[disabled] { opacity: .4; cursor: default; }
+.count { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+/* result */
+.result { --g: var(--accent); border-top: 8px solid var(--g); }
+.code { font-family: var(--display); font-weight: 800; font-size: clamp(56px, 16vw, 88px); line-height: 1; letter-spacing: .04em; color: var(--g); margin: 0; }
+.tname { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; }
+.group { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--g); border: 2px solid var(--g); border-radius: 999px; padding: 2px 10px; }
+.desc { margin: 0; font-size: 17px; }
+.words { display: flex; flex-wrap: wrap; gap: 8px; }
+.word { font-weight: 700; background: color-mix(in srgb, var(--g) 14%, var(--card)); color: var(--ink); border-radius: 8px; padding: 4px 12px; }
+.letters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lt { border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: center; min-width: 0; }
+.lt b { display: block; font-family: var(--display); font-size: 24px; color: var(--g); }
+.lt span { font-size: 12px; color: var(--muted); display: block; line-height: 1.3; }
+.talk { background: var(--bg); border-radius: 12px; padding: 14px 16px; font-size: 15px; }
+.talk strong { color: var(--accent); }
+
+/* all types */
+details { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 20px; }
+summary { cursor: pointer; font-weight: 700; font-family: var(--display); font-size: 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 14px; }
+.tile { border-radius: 12px; padding: 10px 12px; border: 1px solid var(--line); border-left: 0; background: color-mix(in srgb, var(--g) 10%, var(--card)); min-width: 0; }
+.tile b { font-family: var(--display); color: var(--g); display: block; font-size: 18px; letter-spacing: .03em; }
+.tile span { font-size: 14px; }
+.tile.me { outline: 3px solid var(--g); }
+.note { font-size: 13px; color: var(--muted); text-align: center; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Lesson 12 · Speaking Part 2 · Just for fun</span>
+    <h1>What's your personality type?</h1>
+    <p class="sub">Answer 12 quick questions. Choose the answer that sounds most like you.</p>
+  </header>
+
+  <section class="card" id="quiz" aria-live="polite">
+    <div class="progress" id="progress"></div>
+    <div class="qhead">
+      <span class="qtag" id="qtag"></span>
+      <p class="question" id="question"></p>
+    </div>
+    <div class="options" id="options"></div>
+    <div class="nav">
+      <button class="btn" id="back" type="button">← Back</button>
+      <span class="count" id="count"></span>
+    </div>
+  </section>
+
+  <section class="card result" id="result" hidden>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span class="eyebrow">You are…</span>
+      <p class="code" id="rcode"></p>
+      <p class="tname" id="rname"></p>
+      <span><span class="group" id="rgroup"></span></span>
+    </div>
+    <p class="desc" id="rdesc"></p>
+    <div class="words" id="rwords"></div>
+    <div class="letters" id="rletters"></div>
+    <div class="talk">
+      <strong>Tell your partner:</strong> Do you agree with your result? Use a relative clause:<br>
+      <em>"I think I'm quite a/an <span id="rword1"></span> person <strong>who</strong> … , <strong>which</strong> …"</em>
+    </div>
+    <div class="nav">
+      <button class="btn" id="restart" type="button">↺ Try again</button>
+    </div>
+  </section>
+
+  <details id="all">
+    <summary>See all 16 types</summary>
+    <div class="grid" id="grid"></div>
+  </details>
+
+  <p class="note">Based on the Myers-Briggs idea of 16 types. It's a game, not a scientific test!</p>
+</div>
+
+<script>
+const PARTS = [
+  { name: "E or I", hint: "Where do you get your energy?", a: "E", b: "I" },
+  { name: "S or N", hint: "How do you see the world?", a: "S", b: "N" },
+  { name: "T or F", hint: "How do you make decisions?", a: "T", b: "F" },
+  { name: "J or P", hint: "How do you live your life?", a: "J", b: "P" },
+];
+const Q = [
+  ["After a long week, you want to…", "go out with friends", "stay home alone"],
+  ["In a group project, you usually…", "talk first and share ideas", "listen first and think"],
+  ["At a party, you…", "talk to many new people", "stay with one or two close friends"],
+  ["When you learn something new, you prefer…", "real examples", "the big idea behind it"],
+  ["When you tell a story, you…", "give exact details", "jump around and add your imagination"],
+  ["You are more interested in…", "what is happening now", "what could happen in the future"],
+  ["Your friend shows you a bad drawing. You…", "tell the truth politely", "say something nice to make them happy"],
+  ["When you choose a university major, you think about…", "jobs and salary", "what you love"],
+  ["In an argument, it is more important to be…", "right", "kind"],
+  ["Before a trip, you…", "plan every day", "decide when you get there"],
+  ["When you have homework, you…", "finish it early", "do it at the last minute"],
+  ["Your desk is usually…", "neat and organised", "a creative mess"],
+];
+const LETTER_INFO = {
+  E: "Extravert – energy from people", I: "Introvert – energy from quiet time",
+  S: "Sensing – facts & details", N: "Intuition – ideas & the future",
+  T: "Thinking – logic first", F: "Feeling – people first",
+  J: "Judging – plans & order", P: "Perceiving – flexible & free",
+};
+const GROUPS = { NT: ["Analysts", "--analyst"], NF: ["Diplomats", "--diplomat"], SJ: ["Sentinels", "--sentinel"], SP: ["Explorers", "--explorer"] };
+const TYPES = {
+  INTJ: ["Architect", "Thinks far into the future and has a plan for everything.", ["imaginative", "visionary", "strategic"]],
+  INTP: ["Logician", "Loves new ideas and always wants to learn more.", ["logical", "inventive", "curious"]],
+  ENTJ: ["Commander", "A strong leader who never gives up and always finds a way.", ["bold", "determined", "leader"]],
+  ENTP: ["Debater", "Smart, loves a good argument and always speaks their mind.", ["argumentative", "intellectual", "outspoken"]],
+  INFJ: ["Advocate", "Quiet and hard to read, but works hard to help others.", ["reserved", "mystical", "tireless"]],
+  INFP: ["Mediator", "Gentle and romantic, always ready to help a good cause.", ["poetic", "altruistic", "kind"]],
+  ENFJ: ["Protagonist", "Warm and inspiring – people love listening to them.", ["expressive", "charismatic", "inspiring"]],
+  ENFP: ["Campaigner", "Full of energy and creative ideas, and makes friends easily.", ["enthusiastic", "creative", "sociable"]],
+  ISTJ: ["Logistician", "Responsible and organised – you can always count on them.", ["reliable", "practical", "organised"]],
+  ISFJ: ["Defender", "Caring and loyal, always protecting the people they love.", ["caring", "loyal", "patient"]],
+  ESTJ: ["Executive", "Great at managing people and getting things done.", ["organised", "decisive", "hardworking"]],
+  ESFJ: ["Consul", "Friendly and helpful, always making sure everyone feels included.", ["friendly", "supportive", "sociable"]],
+  ISTP: ["Virtuoso", "Calm and good with their hands, loves to try and fix things.", ["practical", "independent", "calm"]],
+  ISFP: ["Adventurer", "Artistic and easy-going, always ready to try something new.", ["artistic", "easy-going", "sensitive"]],
+  ESTP: ["Entrepreneur", "Energetic and brave, loves action and taking risks.", ["energetic", "adventurous", "confident"]],
+  ESFP: ["Entertainer", "Fun and spontaneous – life is never boring around them.", ["fun-loving", "spontaneous", "outgoing"]],
+};
+const groupOf = c => GROUPS[c[1] === "N" ? "N" + c[2] : "S" + c[3]];
+
+let answers = new Array(12).fill(null);
+let i = 0;
+const $ = id => document.getElementById(id);
+
+function renderProgress() {
+  $("progress").innerHTML = PARTS.map((p, pi) =>
+    `<div class="part"><span class="part-label">${p.name}</span><div class="dots">${
+      [0, 1, 2].map(k => { const n = pi * 3 + k; return `<span class="dot ${n === i ? "now" : answers[n] ? "done" : ""}"></span>`; }).join("")
+    }</div></div>`).join("");
+}
+function renderQ() {
+  const [q, a, b] = Q[i];
+  const p = PARTS[Math.floor(i / 3)];
+  $("qtag").textContent = `Part ${Math.floor(i / 3) + 1} · ${p.hint}`;
+  $("question").textContent = `${i + 1}. ${q}`;
+  $("options").innerHTML = [["A", a], ["B", b]].map(([L, t]) =>
+    `<button type="button" class="opt ${answers[i] === L ? "picked" : ""}" data-l="${L}" id="opt-${L}"><span class="letter">${L}</span><span>${t}</span></button>`).join("");
+  $("count").textContent = `${i + 1} / 12`;
+  $("back").disabled = i === 0;
+  renderProgress();
+}
+function score() {
+  return PARTS.map((p, pi) => {
+    const a = answers.slice(pi * 3, pi * 3 + 3).filter(x => x === "A").length;
+    return a >= 2 ? p.a : p.b;
+  }).join("");
+}
+function showResult() {
+  const code = score();
+  const [name, desc, words] = TYPES[code];
+  const [gname, gvar] = groupOf(code);
+  const res = $("result");
+  res.style.setProperty("--g", `var(${gvar})`);
+  $("rcode").textContent = code;
+  $("rname").textContent = `The ${name}`;
+  $("rgroup").textContent = gname;
+  $("rdesc").textContent = desc;
+  $("rwords").innerHTML = words.map(w => `<span class="word">${w}</span>`).join("");
+  $("rletters").innerHTML = code.split("").map(L => {
+    const [short, rest] = LETTER_INFO[L].split(" – ");
+    return `<div class="lt"><b>${L}</b><span>${short}</span><span>${rest}</span></div>`;
+  }).join("");
+  $("rword1").textContent = words[0];
+  $("quiz").hidden = true; res.hidden = false;
+  renderGrid(code);
+  res.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function renderGrid(me) {
+  $("grid").innerHTML = Object.entries(TYPES).map(([c, [n]]) => {
+    const [, gvar] = groupOf(c);
+    return `<div class="tile ${c === me ? "me" : ""}" style="--g: var(${gvar})"><b>${c}</b><span>${n}</span></div>`;
+  }).join("");
+}
+$("options").addEventListener("click", e => {
+  const btn = e.target.closest(".opt"); if (!btn) return;
+  answers[i] = btn.dataset.l;
+  renderQ();
+  setTimeout(() => { if (i < 11) { i++; renderQ(); } else showResult(); }, 220);
+});
+$("back").addEventListener("click", () => { if (i > 0) { i--; renderQ(); } });
+$("restart").addEventListener("click", () => {
+  answers = new Array(12).fill(null); i = 0;
+  $("result").hidden = true; $("quiz").hidden = false; renderQ(); renderGrid(null);
+});
+renderQ(); renderGrid(null);
+</script>
+
+</html>
